@@ -155,22 +155,13 @@ pub fn int3() {
 
 /// Generate a software interrupt by invoking the `int` instruction.
 ///
-/// This currently needs to be a macro because the `int` argument needs to be an
-/// immediate. This macro will be replaced by a generic function when support for
-/// const generics is implemented in Rust.
+/// ## Safety
+/// Invoking an arbitrary interrupt is unsafe. It can cause your system to
+/// crash if you invoke a double-fault (#8) or machine-check (#18) exception.
+/// It can also cause memory/register corruption depending on the interrupt
+/// implementation (if it expects values/pointers to be passed in registers).
+#[inline]
 #[cfg(feature = "inline_asm")]
-#[macro_export]
-macro_rules! software_interrupt {
-    ($x:expr) => {{
-        asm!("int {id}", id = const $x, options(nomem, nostack));
-    }};
-}
-
-/// Not implemented
-#[cfg(not(feature = "inline_asm"))]
-#[macro_export]
-macro_rules! software_interrupt {
-    ($x:expr) => {{
-        compile_error!("software_interrupt not implemented for non-nightly");
-    }};
+pub unsafe fn software_interrupt<const ID: u8>() {
+    asm!("int {}", const ID, options(nomem, nostack));
 }
